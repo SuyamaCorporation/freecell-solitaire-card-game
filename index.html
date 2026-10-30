@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>フリーセル ソリティア</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  .card {
+    width: 64px; height: 90px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    background: white;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    cursor: pointer;
+    user-select: none;
+    font-size: 0.9rem;
+    font-weight: bold;
+    position: absolute;
+    transition: box-shadow 0.1s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  }
+  .card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+  .card.selected { box-shadow: 0 0 0 3px #3b82f6, 0 4px 12px rgba(0,0,0,0.3); }
+  .card.red { color: #dc2626; }
+  .card.black { color: #1f2937; }
+  .slot {
+    width: 64px; height: 90px;
+    border-radius: 8px;
+    border: 2px dashed rgba(255,255,255,0.3);
+    background: rgba(0,0,0,0.2);
+    position: relative;
+    flex-shrink: 0;
+  }
+  .column { position: relative; min-height: 200px; }
+  #game-area { touch-action: none; }
+</style>
+</head>
+<body class="bg-green-800 min-h-screen">
+<div class="max-w-4xl mx-auto px-2 py-4">
+  <h1 class="text-2xl font-bold text-center text-white mb-1">フリーセル ソリティア</h1>
+
+  <!-- Top area: FreeCells + Homes -->
+  <div class="flex justify-between items-start mb-4 px-2">
+    <!-- Free cells -->
+    <div class="flex gap-2">
+      <div class="text-xs text-green-300 text-center mb-1 col-span-4">フリーセル</div>
+    </div>
+    <div class="flex gap-2" id="free-cells-area">
+      <div class="slot" id="fc-0" onclick="clickSlot('fc',0)" aria-label="フリーセル1" role="button" tabindex="0"></div>
+      <div class="slot" id="fc-1" onclick="clickSlot('fc',1)" aria-label="フリーセル2" role="button" tabindex="0"></div>
+      <div class="slot" id="fc-2" onclick="clickSlot('fc',2)" aria-label="フリーセル3" role="button" tabindex="0"></div>
+      <div class="slot" id="fc-3" onclick="clickSlot('fc',3)" aria-label="フリーセル4" role="button" tabindex="0"></div>
+    </div>
+    <!-- Homes -->
+    <div class="flex gap-2" id="homes-area">
+      <div class="slot" id="home-0" onclick="clickSlot('home',0)" aria-label="ホームスペード" role="button" tabindex="0"><span class="text-white text-2xl opacity-30">♠</span></div>
+      <div class="slot" id="home-1" onclick="clickSlot('home',1)" aria-label="ホームハート" role="button" tabindex="0"><span class="text-white text-2xl opacity-30">♥</span></div>
+      <div class="slot" id="home-2" onclick="clickSlot('home',2)" aria-label="ホームダイヤ" role="button" tabindex="0"><span class="text-white text-2xl opacity-30">♦</span></div>
+      <div class="slot" id="home-3" onclick="clickSlot('home',3)" aria-label="ホームクラブ" role="button" tabindex="0"><span class="text-white text-2xl opacity-30">♣</span></div>
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div class="flex gap-2 justify-center mb-4">
+    <button onclick="newGame()" class="bg-green-600 hover:bg-green-500 text-white px-4 py-1.5 rounded-lg text-sm font-semibold">新ゲーム</button>
+    <button onclick="undoMove()" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-1.5 rounded-lg text-sm font-semibold">Undo</button>
+    <button onclick="autoFinish()" class="bg-yellow-600 hover:bg-yellow-500 text-white px-4 py-1.5 rounded-lg text-sm font-semibold">自動完了</button>
+    <button onclick="showHint()" class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-1.5 rounded-lg text-sm font-semibold">ヒント</button>
+  </div>
+
+  <div id="msg" class="text-center text-yellow-200 text-sm min-h-5 mb-2"></div>
+
+  <!-- Main columns -->
+  <div class="flex gap-2 justify-center" id="columns-area">
+    <div class="slot column" id="col-0" onclick="clickSlot('col',0)" style="min-height:200px;flex:1;max-width:72px" role="button" tabindex="0"></div>
+    <div class="slot column" id="col-1" onclick="clickSlot('col',1)" style="min-height:200px;flex:1;max-width:72px" role="button" tabindex="0"></div>
+    <div class="slot column" id="col-2" onclick="clickSlot('col',2)" style="min-height:200px;flex:1;max-width:72px" role="button" tabindex="0"></div>
+    <div class="slot column" id="col-3" onclick="clickSlot('col',3)" style="min-height:200px;flex:1;max-width:72px" role="button" tabindex="0"></div>
+    <div class="slot column" id="col-4" onclick="clickSlot('col',4)" style="min-height:200px;flex:1;max-width:72px" role="button" tabindex="0"></div>
+    <div class="slot column" id="col-5" onclick="clickSlot('col',5)" style="min-height:200px;flex:1;max-width:72px" role="button" tabindex="0"></div>
+    <div class="slot column" id="col-6" onclick="clickSlot('col',6)" style="min-height:200px;flex:1;max-width:72px" role="button" tabindex="0"></div>
+    <div class="slot column" id="col-7" onclick="clickSlot('col',7)" style="min-height:200px;flex:1;max-width:72px" role="button" tabindex="0"></div>
+  </div>
+</div>
+
+<script>
+const SUITS = ['♠','♥','♦','♣'];
+const SUIT_COLORS = { '♠':'black','♣':'black','♥':'red','♦':'red' };
+const RANKS = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+const HOME_SUITS = ['♠','♥','♦','♣'];
+
+let freeCells, homes, columns, selected, history;
+
+function makeCard(rank, suit) {
+  return { rank, suit, value: RANKS.indexOf(rank) + 1 };
+}
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function newGame() {
+  let deck = [];
+  SUITS.forEach(s => RANKS.forEach(r => deck.push(makeCard(r, s))));
+  shuffle(deck);
+  freeCells = [null, null, null, null];
+  homes = [null, null, null, null]; // top card of each home pile
+  homePiles = [[], [], [], []];
+  columns = Array.from({length:8}, () => []);
+  // deal: first 4 columns get 7 cards, last 4 get 6
+  let idx = 0;
+  for (let c = 0; c < 8; c++) {
+    const count = c < 4 ? 7 : 6;
+    for (let i = 0; i < count; i++) columns[c].push(deck[idx++]);
+  }
+  selected = null;
+  history = [];
+  setMsg('');
+  render();
+}
+
+let homePiles;
+
+function cardLabel(card) {
+  if (!card) return '';
+  return card.rank + card.suit;
+}
+
+function isRed(card) { return card.suit === '♥' || card.suit === '♦'; }
+function isBlack(card) { return !isRed(card); }
+
+function canPlaceOnColumn(card, col) {
+  if (col.length === 0) return true;
+  const top = col[col.length - 1];
+  // opposite color and rank one less
+  return (isRed(card) !== isRed(top)) && (card.value === top.value - 1);
+}
+
+function canPlaceOnHome(card, homeIdx) {
+  const pile = homePiles[homeIdx];
+  const suit = HOME_SUITS[homeIdx];
+  if (card.suit !== suit) return false;
+  if (pile.length === 0) return card.value === 1; // Ace
+  return card.value === pile[pile.length - 1].value + 1;
+}
+
+function maxMovable() {
+  const freeCellEmpty = freeCells.filter(c => c === null).length;
+  const emptyCol = columns.filter(c => c.length === 0).length;
+  return (freeCellEmpty + 1) * Math.pow(2, emptyCol);
+}
+
+function clickCard(loc, locIdx, cardIdx) {
+  // loc: 'fc'|'home'|'col', locIdx: index, cardIdx: position in column (for col)
+  if (selected) {
+    // try to move selected to clicked location
+    const moved = tryMove(selected, {loc, locIdx, cardIdx});
+    if (moved) { selected = null; render(); return; }
+    // deselect if same
+    if (selected.loc === loc && selected.locIdx === locIdx) { selected = null; render(); return; }
+  }
+  // select the card
+  let card = null;
+  if (loc === 'fc') card = freeCells[locIdx];
+  else if (loc === 'col') card = columns[locIdx][cardIdx];
+  if (card) {
+    selected = { loc, locIdx, cardIdx, card };
+    render();
+  }
+}
+
+function clickSlot(loc, locIdx) {
+  if (!selected) return;
+  const moved = tryMove(selected, { loc, locIdx, cardIdx: -1 });
+  if (moved) { selected = null; render(); }
+}
+
+function tryMove(from, to) {
+  const fromCard = from.card;
+  let movedCards = [];
+
+  if (from.loc === 'fc') {
+    movedCards = [freeCells[from.locIdx]];
+  } else if (from.loc === 'col') {
+    movedCards = columns[from.locIdx].slice(from.cardIdx);
+  }
+
+  if (movedCards.length === 0) return false;
+
+  // Save state
+  const state = {
+    freeCells: [...freeCells],
+    homePiles: homePiles.map(p => [...p]),
+    columns: columns.map(c => [...c])
+  };
+
+  if (to.loc === 'home') {
+    if (movedCards.length !== 1) return false;
+    const card = movedCards[0];
+    if (!canPlaceOnHome(card, to.locIdx)) return false;
+    if (from.loc === 'fc') freeCells[from.locIdx] = null;
+    else columns[from.locIdx].pop();
+    homePiles[to.locIdx].push(card);
+    history.push(state);
+    checkWin();
+    return true;
+  }
+
+  if (to.loc === 'fc') {
+    if (movedCards.length !== 1) return false;
+    if (freeCells[to.locIdx] !== null) return false;
+    if (from.loc === 'fc') { freeCells[from.locIdx] = null; }
+    else columns[from.locIdx].pop();
+    freeCells[to.locIdx] = movedCards[0];
+    history.push(state);
+    return true;
+  }
+
+  if (to.loc === 'col') {
+    const destCol = columns[to.locIdx];
+    if (movedCards.length > maxMovable()) return false;
+    if (!canPlaceOnColumn(movedCards[0], destCol)) return false;
+    if (from.loc === 'fc') freeCells[from.locIdx] = null;
+    else columns[from.locIdx].splice(from.cardIdx);
+    movedCards.forEach(c => destCol.push(c));
+    history.push(state);
+    return true;
+  }
+  return false;
+}
+
+function undoMove() {
+  if (history.length === 0) { setMsg('Undoできません'); return; }
+  const state = history.pop();
+  freeCells = [...state.freeCells];
+  homePiles = state.homePiles.map(p => [...p]);
+  columns = state.columns.map(c => [...c]);
+  selected = null;
+  setMsg('Undoしました');
+  render();
+}
+
+function autoFinish() {
+  let moved = true;
+  let count = 0;
+  while (moved && count < 1000) {
+    moved = false;
+    // try moving from freecells and column tops to home
+    for (let h = 0; h < 4; h++) {
+      // from freecells
+      for (let f = 0; f < 4; f++) {
+        if (freeCells[f] && canPlaceOnHome(freeCells[f], h)) {
+          const card = freeCells[f];
+          freeCells[f] = null;
+          homePiles[h].push(card);
+          moved = true;
+        }
+      }
+      // from columns
+      for (let c = 0; c < 8; c++) {
+        const col = columns[c];
+        if (col.length > 0 && canPlaceOnHome(col[col.length-1], h)) {
+          homePiles[h].push(col.pop());
+          moved = true;
+        }
+      }
+    }
+    count++;
+  }
+  render();
+  checkWin();
+}
+
+function showHint() {
+  // simple hint: find any valid move
+  for (let c = 0; c < 8; c++) {
+    const col = columns[c];
+    if (col.length === 0) continue;
+    const card = col[col.length - 1];
+    for (let h = 0; h < 4; h++) {
+      if (canPlaceOnHome(card, h)) { setMsg(`ヒント: ${cardLabel(card)} → ホーム${HOME_SUITS[h]}`); return; }
+    }
+    for (let d = 0; d < 8; d++) {
+      if (d !== c && canPlaceOnColumn(card, columns[d])) { setMsg(`ヒント: ${cardLabel(card)} → 列${d+1}へ`); return; }
+    }
+  }
+  setMsg('ヒントなし');
+}
+
+function checkWin() {
+  const total = homePiles.reduce((s, p) => s + p.length, 0);
+  if (total === 52) {
+    setMsg('🎉 クリア！おめでとうございます！');
+    const wins = parseInt(localStorage.getItem('freecell-wins') || '0') + 1;
+    localStorage.setItem('freecell-wins', wins);
+  }
+}
+
+function setMsg(msg) {
+  document.getElementById('msg').textContent = msg;
+}
+
+function render() {
+  // render free cells
+  for (let i = 0; i < 4; i++) {
+    const slot = document.getElementById('fc-' + i);
+    slot.innerHTML = '';
+    if (freeCells[i]) {
+      const el = createCardEl(freeCells[i], 'fc', i, 0);
+      el.style.position = 'relative';
+      slot.appendChild(el);
+    }
+  }
+  // render homes
+  for (let i = 0; i < 4; i++) {
+    const slot = document.getElementById('home-' + i);
+    slot.innerHTML = '';
+    const pile = homePiles[i];
+    if (pile.length > 0) {
+      const card = pile[pile.length - 1];
+      const el = createCardEl(card, 'home', i, 0);
+      el.style.position = 'relative';
+      el.style.cursor = 'default';
+      slot.appendChild(el);
+    } else {
+      slot.innerHTML = `<span class="${isRed({suit: HOME_SUITS[i]}) ? 'text-red-400' : 'text-white'} text-2xl opacity-30">${HOME_SUITS[i]}</span>`;
+    }
+  }
+  // render columns
+  const VOFFSET = 26;
+  for (let c = 0; c < 8; c++) {
+    const slot = document.getElementById('col-' + c);
+    slot.innerHTML = '';
+    const col = columns[c];
+    const height = col.length > 0 ? 90 + (col.length - 1) * VOFFSET : 90;
+    slot.style.minHeight = Math.max(height + 10, 200) + 'px';
+    col.forEach((card, ci) => {
+      const el = createCardEl(card, 'col', c, ci);
+      el.style.top = (ci * VOFFSET) + 'px';
+      slot.appendChild(el);
+    });
+  }
+}
+
+function createCardEl(card, loc, locIdx, cardIdx) {
+  const el = document.createElement('div');
+  el.className = 'card ' + (isRed(card) ? 'red' : 'black');
+  const isSelected = selected && selected.loc === loc && selected.locIdx === locIdx && (loc === 'fc' || selected.cardIdx === cardIdx);
+  if (isSelected) el.classList.add('selected');
+  el.innerHTML = `<span class="text-sm leading-none">${card.rank}</span><span class="text-base leading-none">${card.suit}</span>`;
+  el.setAttribute('aria-label', cardLabel(card));
+  el.setAttribute('role', 'button');
+  el.setAttribute('tabindex', '0');
+  el.onclick = (e) => { e.stopPropagation(); clickCard(loc, locIdx, cardIdx); };
+  el.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); clickCard(loc, locIdx, cardIdx); } };
+  return el;
+}
+
+function isRed(card) { return card.suit === '♥' || card.suit === '♦'; }
+
+homePiles = [[], [], [], []];
+newGame();
+</script>
+</body>
+</html>
